@@ -3,7 +3,7 @@
 module FormalLanguage where
 
 open import Data.Empty
-open import Data.Fin.Base using (Fin; suc; zero; fromℕ)
+open import Data.Fin.Base as Fin using (Fin; suc; zero; fromℕ; toℕ)
 open import Data.List.Base as List hiding ([_])
 open import Data.List.Properties
 open import Data.List.Relation.Unary.First as First using (First; first)
@@ -179,27 +179,94 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
       ... | inj₁ p = p
       ... | inj₂ q = ⊥-elim (All¬⇒¬Any q αs-any)
 
+      i : Fin (length αs)
+      i = First.index αs-first
+
       ω : V *
-      ω = lookup αs (First.index αs-first)
+      ω = lookup αs i
+
+      ω≢ε : ω ≢ []
+      ω≢ε = inits′-≢[] α α≢ε (First.index αs-first)
+
+      [α,ω] : [ α , ω ]
+      [α,ω] = First.index-satisfied αs-first
 
     generator : V *
     generator = ω
 
     generator≢ε : ω ≢ []
-    generator≢ε = inits′-≢[] α α≢ε (First.index αs-first)
+    generator≢ε = ω≢ε
 
     generator-[,] : [ ω , α ]
-    generator-[,] = [,]-sym α ω (First.index-satisfied αs-first)
+    generator-[,] = [,]-sym α ω [α,ω]
 
-    generator-min : ∀ δ → length δ < length ω → [ ω , δ ] → δ ≡ []
-    generator-min δ ∣δ∣<∣ω∣ [ω,δ] = {!!}
+    module _ δ (∣δ∣<∣ω∣ : length δ < length ω) ([ω,δ] : [ ω , δ ]) where
+      private
+        [α,δ] : [ α , δ ]
+        [α,δ] = [,]-trans ω≢ε [α,ω] [ω,δ]
+
+        η₁ : V *
+        η₁ = subtract δ ω
+
+        δη₁≡ω : δ ++ η₁ ≡ ω
+        δη₁≡ω = subtract-++ʳ δ ω (<⇒≤ ∣δ∣<∣ω∣) ([,]-sym ω δ [ω,δ])
+
+        η₂ : V *
+        η₂ = proj₁ (lookup-inits′ α α≢ε i)
+
+        ωη₂≡α : ω ++ η₂ ≡ α
+        ωη₂≡α = proj₂ (lookup-inits′ α α≢ε i)
+
+        η : V *
+        η = η₁ ++ η₂
+
+        δη≡α : δ ++ η ≡ α
+        δη≡α = begin
+          δ ++ η₁ ++ η₂   ≡˘⟨ ++-assoc δ η₁ η₂ ⟩
+          (δ ++ η₁) ++ η₂ ≡⟨ cong (_++ η₂) δη₁≡ω ⟩
+          ω ++ η₂         ≡⟨ ωη₂≡α ⟩
+          α               ∎
+          where open ≡-Reasoning
+
+        module _ (δ≢ε : δ ≢ []) where
+          j : Fin (length αs)
+          j = indexOfInits′ δ α δ≢ε α≢ε δη≡α
+
+          αs[j]≡δ : lookup αs j ≡ δ
+          αs[j]≡δ = lookup-indexOfInits′ δ α δ≢ε α≢ε δη≡α
+
+          ∣αs[j]∣≡1+j : length (lookup αs j) ≡ suc (toℕ j)
+          ∣αs[j]∣≡1+j = length-lookup-inits′ α α≢ε j
+
+          ∣δ∣≡1+j : length δ ≡ suc (toℕ j)
+          ∣δ∣≡1+j = subst (λ δ → length δ ≡ suc (toℕ j)) αs[j]≡δ ∣αs[j]∣≡1+j
+
+          ∣ω∣≡1+i : length ω ≡ suc (toℕ i)
+          ∣ω∣≡1+i = length-lookup-inits′ α α≢ε i
+
+          i≤j : i Fin.≤ j
+          i≤j = index-min αs αs-first j (subst [ α ,_] (sym αs[j]≡δ) [α,δ])
+
+          ∣ω∣≤∣δ∣ : length ω ≤ length δ
+          ∣ω∣≤∣δ∣ = begin
+            length ω ≡⟨ ∣ω∣≡1+i ⟩
+            1 + toℕ i ≤⟨ s≤s i≤j ⟩
+            1 + toℕ j ≡˘⟨ ∣δ∣≡1+j ⟩
+            length δ ∎
+            where open ≤-Reasoning
+
+          never : ⊥
+          never = <⇒≱ ∣δ∣<∣ω∣ ∣ω∣≤∣δ∣
+
+      generator-min : δ ≡ []
+      generator-min = Sum.[ id , ⊥-elim ∘ never ]′ (Sum.fromDec (≡[]-dec δ))
 
   theorem : ∀ (S : Pred (V *) ℓ) → Dec ∃⟨ S ∩ (_≢ []) ⟩ → ++-commute S → Σ[ ω ∈ V * ] S ⊆ [ ω ]*
   theorem S (no ∄) _ = [] , λ
     { {[]} _ → 0 , refl
     ; {x ∷ xs} x∷xs∈S → ⊥-elim (∄ (x ∷ xs , x∷xs∈S , λ ()))
     }
-  theorem S (yes (ω̃ , ω̃∈S , ω̃≢ε)) S[_,_] = {!!}
+  theorem S (yes (ω̃ , ω̃∈S , ω̃≢ε)) S[_,_] = ω , S̅⊆[ω]* ∘ S⊆S̅
     where
       ω : V *
       ω = generator ω̃ ω̃≢ε

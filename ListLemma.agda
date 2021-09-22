@@ -3,17 +3,21 @@
 module ListLemma where
 
 open import Data.Empty
-open import Data.Fin.Base using (Fin; suc; zero; fromℕ)
+open import Data.Fin.Base as Fin using (Fin; suc; zero; fromℕ; toℕ)
+open import Data.Fin.Properties
 open import Data.List.Base as List
 open import Data.List.Properties
+open import Data.List.Relation.Unary.First as First using (First)
 open import Data.List.Relation.Unary.Any using (Any; here; there)
 open import Data.Nat.Base hiding (_^_)
+open import Data.Nat.Properties
 open import Data.Product
 open import Function.Base
 open import Level
 open import Relation.Binary.PropositionalEquality.Core
 open import Relation.Binary.PropositionalEquality.Properties
-open import Relation.Unary using (Pred)
+open import Relation.Nullary
+open import Relation.Unary using (Pred; Decidable; ∁)
 
 private
   variable
@@ -75,39 +79,105 @@ lookup-map f (x ∷ xs) (suc i) = begin
   f (lookup (x ∷ xs) (subst Fin (cong ℕ.suc (length-map f xs)) (Fin.suc i))) ∎
   where open ≡-Reasoning
 
-lastIndexOfInits : ∀ (xs : List A) → Fin (length (inits xs))
-lastIndexOfInits [] = Fin.zero
-lastIndexOfInits (x ∷ xs) = Fin.suc (subst Fin (sym (length-map (x ∷_) (inits xs))) (lastIndexOfInits xs))
+indexOfInits : ∀ (xs : List A) {ys} zs → xs ++ ys ≡ zs → Fin (length (inits zs))
+indexOfInits [] [] p = Fin.zero
+indexOfInits [] (z ∷ zs) p = Fin.zero
+indexOfInits (x ∷ xs) (x ∷ zs) refl = Fin.suc (subst Fin (sym (length-map (x ∷_) (inits zs))) (indexOfInits xs zs refl))
 
-lookup-lastIndexOfInits : ∀ (xs : List A) → lookup (inits xs) (lastIndexOfInits xs) ≡ xs
-lookup-lastIndexOfInits [] = refl
-lookup-lastIndexOfInits (x ∷ xs) = begin
-  lookup (inits (x ∷ xs)) (lastIndexOfInits (x ∷ xs))                           ≡⟨⟩
-  lookup (List.map (x ∷_) (inits xs)) (subst Fin (sym p) (lastIndexOfInits xs)) ≡⟨ lookup-map (x ∷_) (inits xs) _ ⟩
-  x ∷ lookup (inits xs) (subst Fin p (subst Fin (sym p) (lastIndexOfInits xs))) ≡⟨ cong (_∷_ x ∘ lookup (inits xs)) (subst-subst-sym p) ⟩
-  x ∷ lookup (inits xs) (lastIndexOfInits xs)                                   ≡⟨ cong (x ∷_) (lookup-lastIndexOfInits xs) ⟩
-  x ∷ xs                                                                        ∎
+lookup-indexOfInits : ∀ (xs : List A) {ys} zs (p : xs ++ ys ≡ zs) → lookup (inits zs) (indexOfInits xs zs p) ≡ xs
+lookup-indexOfInits [] [] _ = refl
+lookup-indexOfInits [] (x ∷ zs) _ = refl
+lookup-indexOfInits (x ∷ xs) (x ∷ zs) refl = begin
+  lookup (List.map (x ∷_) (inits zs)) (subst Fin (sym p) i) ≡⟨ lookup-map (x ∷_) (inits zs) (subst Fin (sym p) i) ⟩
+  x ∷ lookup (inits zs) (subst Fin p (subst Fin (sym p) i)) ≡⟨ cong (_∷_ x ∘ lookup (inits zs)) (subst-subst-sym p) ⟩
+  x ∷ lookup (inits zs) (indexOfInits xs zs refl)           ≡⟨ cong (x ∷_) (lookup-indexOfInits xs zs refl) ⟩
+  x ∷ xs                                                    ∎
   where
     open ≡-Reasoning
-    p : length (List.map (x ∷_) (inits xs)) ≡ length (inits xs)
-    p = length-map (x ∷_) (inits xs)
+    i = indexOfInits xs zs refl
+    p = length-map (x ∷_) (inits zs)
+
+indexOfInits′ : ∀ (xs : List A) {ys} zs (xs≢[] : xs ≢ []) (zs≢[] : zs ≢ []) → xs ++ ys ≡ zs → Fin (length (inits′ zs zs≢[]))
+indexOfInits′ [] zs []≢[] zs≢[] _ = ⊥-elim ([]≢[] refl)
+indexOfInits′ (x ∷ xs) (x ∷ zs) xs≢[] zs≢[] refl = subst Fin (sym (length-map (x ∷_) (inits zs))) (indexOfInits xs zs refl)
+
+lookup-indexOfInits′ : ∀ (xs : List A) {ys} zs (xs≢[] : xs ≢ []) (zs≢[] : zs ≢ []) (p : xs ++ ys ≡ zs) →
+                       lookup (inits′ zs zs≢[]) (indexOfInits′ xs zs xs≢[] zs≢[] p) ≡ xs
+lookup-indexOfInits′ [] zs []≢[] zs≢[] _ = ⊥-elim ([]≢[] refl)
+lookup-indexOfInits′ (x ∷ xs) (x ∷ zs) xs≢[] zs≢[] refl = begin
+  lookup (List.map (_∷_ x) (inits zs)) (subst Fin (sym p) i) ≡⟨ lookup-map (x ∷_) (inits zs) (subst Fin (sym p) i) ⟩
+  x ∷ lookup (inits zs) (subst Fin p (subst Fin (sym p) i))  ≡⟨ cong (_∷_ x ∘ lookup (inits zs)) (subst-subst-sym p) ⟩
+  x ∷ lookup (inits zs) i                                    ≡⟨ cong (x ∷_) (lookup-indexOfInits xs zs refl) ⟩
+  x ∷ xs                                                     ∎
+  where
+    open ≡-Reasoning
+    i = indexOfInits xs zs refl
+    p = length-map (x ∷_) (inits zs)
+
+-- lastIndexOfInits : ∀ (xs : List A) → Fin (length (inits xs))
+-- lastIndexOfInits xs = indexOfInits xs xs (++-identityʳ xs)
+--
+-- lookup-lastIndexOfInits : ∀ (xs : List A) → lookup (inits xs) (lastIndexOfInits xs) ≡ xs
+-- lookup-lastIndexOfInits xs = lookup-indexOfInits xs xs (++-identityʳ xs)
 
 lastIndexOfInits′ : ∀ (xs : List A) (xs≢[] : xs ≢ []) → Fin (length (inits′ xs xs≢[]))
-lastIndexOfInits′ [] []≢[] = ⊥-elim ([]≢[] refl)
-lastIndexOfInits′ (x ∷ xs) xs≢[] = subst Fin (sym (length-map (x ∷_) (inits xs))) (lastIndexOfInits xs)
+lastIndexOfInits′ xs xs≢[] = indexOfInits′ xs xs xs≢[] xs≢[] (++-identityʳ xs)
 
 lookup-lastIndexOfInits′ : ∀ (xs : List A) (xs≢[] : xs ≢ []) → lookup (inits′ xs xs≢[]) (lastIndexOfInits′ xs xs≢[]) ≡ xs
-lookup-lastIndexOfInits′ [] []≢[] = ⊥-elim ([]≢[] refl)
-lookup-lastIndexOfInits′ (x ∷ xs) xs≢[] = begin
-  lookup (inits′ (x ∷ xs) xs≢[]) (lastIndexOfInits′ (x ∷ xs) xs≢[])             ≡⟨⟩
-  lookup (List.map (x ∷_) (inits xs)) (subst Fin (sym p) (lastIndexOfInits xs)) ≡⟨ lookup-map (x ∷_) (inits xs) _ ⟩
-  x ∷ lookup (inits xs) (subst Fin p (subst Fin (sym p) (lastIndexOfInits xs))) ≡⟨ cong (_∷_ x ∘ lookup (inits xs)) (subst-subst-sym p) ⟩
-  x ∷ lookup (inits xs) (lastIndexOfInits xs)                                   ≡⟨ cong (x ∷_) (lookup-lastIndexOfInits xs) ⟩
-  x ∷ xs                                                                        ∎
+lookup-lastIndexOfInits′ xs xs≢[] = lookup-indexOfInits′ xs xs xs≢[] xs≢[] (++-identityʳ xs)
+
+private
+  toℕ-subst : ∀ {m n} (p : m ≡ n) i → toℕ (subst Fin p i) ≡ toℕ i
+  toℕ-subst refl i = refl
+
+lookup-inits : ∀ (xs : List A) i → lookup (inits xs) i ≡ take (toℕ i) xs
+lookup-inits [] Fin.zero = refl
+lookup-inits (x ∷ xs) Fin.zero = refl
+lookup-inits (x ∷ xs) (Fin.suc i) = begin
+  lookup (List.map (_∷_ x) (inits xs)) i ≡⟨ lookup-map (x ∷_) (inits xs) i ⟩
+  x ∷ lookup (inits xs) (subst Fin p i)  ≡⟨ cong (x ∷_) (lookup-inits xs (subst Fin p i)) ⟩
+  x ∷ take (toℕ (subst Fin p i)) xs      ≡⟨ cong (λ i → x ∷ take i xs) (toℕ-subst p i) ⟩
+  x ∷ take (toℕ i) xs                    ∎
   where
     open ≡-Reasoning
-    p : length (List.map (x ∷_) (inits xs)) ≡ length (inits xs)
     p = length-map (x ∷_) (inits xs)
+
+private
+  lookup-inits-sublist' : ∀ (xs : List A) i → lookup (inits xs) i ++ drop (toℕ i) xs ≡ xs
+  lookup-inits-sublist' xs i = subst (λ ts → ts ++ drop (toℕ i) xs ≡ xs) (sym (lookup-inits xs i)) (take++drop (toℕ i) xs)
+
+lookup-inits′ : ∀ (xs : List A) (xs≢[] : xs ≢ []) i → ∃[ ys ] lookup (inits′ xs xs≢[]) i ++ ys ≡ xs
+lookup-inits′ [] []≢[] i = ⊥-elim ([]≢[] refl)
+lookup-inits′ (x ∷ xs) xs≢[] i = ys , (begin
+  lookup (List.map (x ∷_) (inits xs)) i ++ ys ≡⟨ cong (_++ ys) (lookup-map (x ∷_) (inits xs) i) ⟩
+  x ∷ lookup (inits xs) j ++ ys               ≡⟨ cong (x ∷_) (lookup-inits-sublist' xs j) ⟩
+  x ∷ xs                                      ∎)
+  where
+    open ≡-Reasoning
+    p = length-map (x ∷_) (inits xs)
+    j = subst Fin p i
+    ys = drop (toℕ j) xs
+
+length-inits : ∀ (xs : List A) → length (inits xs) ≡ ℕ.suc (length xs)
+length-inits [] = refl
+length-inits (x ∷ xs) = cong ℕ.suc (trans (length-map (x ∷_) (inits xs)) (length-inits xs))
+
+length-lookup-inits′ : ∀ (xs : List A) (xs≢[] : xs ≢ []) i → length (lookup (inits′ xs xs≢[]) i) ≡ ℕ.suc (toℕ i)
+length-lookup-inits′ [] []≢[] i = ⊥-elim ([]≢[] refl)
+length-lookup-inits′ (x ∷ xs) xs≢[] i = begin
+  length (lookup (List.map (_∷_ x) (inits xs)) i) ≡⟨ cong length (lookup-map (x ∷_) (inits xs) i) ⟩
+  length (x ∷ lookup (inits xs) (subst Fin p i)) ≡⟨⟩
+  ℕ.suc (length (lookup (inits xs) (subst Fin p i))) ≡⟨ cong (ℕ.suc ∘ length) (lookup-inits xs (subst Fin p i)) ⟩
+  ℕ.suc (length (take (toℕ (subst Fin p i)) xs)) ≡⟨ cong ℕ.suc (length-take (toℕ (subst Fin p i)) xs) ⟩
+  ℕ.suc (toℕ (subst Fin p i) ⊓ length xs) ≡⟨ cong ℕ.suc (m≤n⇒m⊓n≡m i≤∣xs∣) ⟩
+  ℕ.suc (toℕ (subst Fin p i)) ≡⟨ cong ℕ.suc (toℕ-subst p i) ⟩
+  ℕ.suc (toℕ i) ∎
+  where
+    open ≡-Reasoning
+    p = length-map (x ∷_) (inits xs)
+
+    i≤∣xs∣ : toℕ (subst Fin p i) ≤ length xs
+    i≤∣xs∣ = +-cancelˡ-≤ 1 (subst (toℕ (subst Fin p i) <_) (length-inits xs) (toℕ<n (subst Fin p i)))
 
 x∷xs≢[] : ∀ {x : A} {xs} → x ∷ xs ≢ []
 x∷xs≢[] ()
@@ -119,3 +189,13 @@ inits′-≢[] (x ∷ xs) _ i p = x∷xs≢[] $ begin
   lookup (List.map (x ∷_) (inits xs)) i                              ≡⟨ p ⟩
   []                                                                 ∎
   where open ≡-Reasoning
+
+≡[]-dec : Decidable {A = List A} (_≡ [])
+≡[]-dec [] = yes refl
+≡[]-dec (x ∷ xs) = no λ ()
+
+index-min : ∀ {P : Pred A ℓ} xs (pqxs : First (∁ P) P xs) i → P (lookup xs i) → First.index pqxs Fin.≤ i
+index-min (x ∷ xs) First.[ px ] Fin.zero p = z≤n
+index-min (x ∷ xs) (¬px First.∷ pqxs) Fin.zero p = ⊥-elim (¬px p)
+index-min (x ∷ xs) First.[ px ] (Fin.suc i) p = z≤n
+index-min (x ∷ xs) (¬px First.∷ pqxs) (Fin.suc i) p = s≤s (index-min xs pqxs i p)
