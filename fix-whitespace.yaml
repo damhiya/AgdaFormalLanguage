@@ -1,0 +1,5 @@
+included-dirs:
+  - "."
+
+included-files:
+  - "*.agda"

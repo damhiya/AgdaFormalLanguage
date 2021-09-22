@@ -19,8 +19,8 @@ private
   variable
     a ℓ : Level
     A B : Set a
-    
-infix 20 _^_ 
+
+infix 20 _^_
 
 _^_ : List A → ℕ → List A
 α ^ zero = []
@@ -61,10 +61,10 @@ inits′ (x ∷ xs) _ = List.map (x ∷_) (inits xs)
 private
   subst-zero : ∀ {m n} (p : m ≡ n) → subst Fin (cong ℕ.suc p) Fin.zero ≡ Fin.zero
   subst-zero refl = refl
-  
+
   subst-suc : ∀ {m n} (p : m ≡ n) (i : Fin m) → subst Fin (cong ℕ.suc p) (Fin.suc i) ≡ Fin.suc (subst Fin p i)
   subst-suc refl i  = refl
- 
+
 lookup-map : ∀ (f : A → B) (xs : List A) i →
              lookup (List.map f xs) i ≡ f (lookup xs (subst Fin (length-map f xs) i))
 lookup-map f (x ∷ xs) zero = sym (cong (f ∘ lookup (x ∷ xs)) (subst-zero (length-map f xs)))
