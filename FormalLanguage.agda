@@ -21,6 +21,7 @@ open import Relation.Binary.Core
 open import Relation.Binary.Definitions
 open import Relation.Binary.PropositionalEquality.Core
 open import Relation.Nullary
+open import Relation.Nullary.Negation
 open import Relation.Unary hiding (Decidable)
 
 open import ListLemma
@@ -261,7 +262,7 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
           never = <⇒≱ ∣δ∣<∣ω∣ ∣ω∣≤∣δ∣
 
       generator-min : δ ≡ []
-      generator-min = Sum.[ id , ⊥-elim ∘ never ]′ (Sum.fromDec (≡[]-dec δ))
+      generator-min = decidable-stable (≡[]-dec δ) never
 
     private
       generator-factorize-rec : ∀ α → Acc _<_ (length α) → [ ω , α ] → ∃[ n ] α ≡ ω ^ n
