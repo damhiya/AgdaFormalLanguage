@@ -10,10 +10,12 @@ open import Data.List.Relation.Unary.First as First using (First; first)
 open import Data.List.Relation.Unary.Any using (Any)
 open import Data.List.Relation.Unary.All.Properties using (All¬⇒¬Any)
 open import Data.Nat.Base hiding (_^_)
+open import Data.Nat.Induction
 open import Data.Nat.Properties
 open import Data.Product
 open import Data.Sum.Base as Sum using (_⊎_; inj₁; inj₂)
 open import Function.Base
+open import Induction.WellFounded
 open import Level using (Level)
 open import Relation.Binary.Core
 open import Relation.Binary.Definitions
@@ -158,8 +160,8 @@ module _ (α β : V *) (∣α∣≤∣β∣ : length α ≤ length β) ([α,β] 
   subtract-++ʳ : α ++ η ≡ β
   subtract-++ʳ = sym β≡αη
 
-  subtract-commute₁ : [ subtract α β , α ]
-  subtract-commute₁ = [,]-sym α η [α,η]
+  subtract-commute : [ α , subtract α β ]
+  subtract-commute = [α,η]
 
 module _ (V : Set a) (_≟_ : DecidableEquality V) where
 
@@ -249,10 +251,10 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
 
           ∣ω∣≤∣δ∣ : length ω ≤ length δ
           ∣ω∣≤∣δ∣ = begin
-            length ω ≡⟨ ∣ω∣≡1+i ⟩
+            length ω  ≡⟨ ∣ω∣≡1+i ⟩
             1 + toℕ i ≤⟨ s≤s i≤j ⟩
             1 + toℕ j ≡˘⟨ ∣δ∣≡1+j ⟩
-            length δ ∎
+            length δ  ∎
             where open ≤-Reasoning
 
           never : ⊥
@@ -260,6 +262,42 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
 
       generator-min : δ ≡ []
       generator-min = Sum.[ id , ⊥-elim ∘ never ]′ (Sum.fromDec (≡[]-dec δ))
+
+    private
+      generator-factorize-rec : ∀ α → Acc _<_ (length α) → [ ω , α ] → ∃[ n ] α ≡ ω ^ n
+      generator-factorize-rec α (acc rs) [ω,α] with length α <? length ω
+      ... | yes ∣α∣<∣ω∣ = 0 , generator-min α ∣α∣<∣ω∣ [ω,α]
+      ... | no  ∣α∣≮∣ω∣ = suc (proj₁ n,η≡ω^n) , trans α≡ωη (cong (ω ++_) (proj₂ n,η≡ω^n))
+        where
+          ∣ω∣>0 : length ω > 0
+          ∣ω∣>0 = length>0 ω≢ε
+
+          ∣ω∣≤∣α∣ : length ω ≤ length α
+          ∣ω∣≤∣α∣ = ≮⇒≥ ∣α∣≮∣ω∣
+
+          η : V *
+          η = subtract ω α
+
+          ∣η∣<∣α∣ : length η < length α
+          ∣η∣<∣α∣ = begin-strict
+            length η                              ≡⟨⟩
+            length (take (length α ∸ length ω) α) ≡⟨ length-take (length α ∸ length ω) α ⟩
+            (length α ∸ length ω) ⊓ length α      ≡⟨ m≤n⇒m⊓n≡m (m∸n≤m (length α) (length ω)) ⟩
+            length α ∸ length ω                   <⟨ m>0∧n>0⇒m∸n<m (<-transˡ ∣ω∣>0 ∣ω∣≤∣α∣) ∣ω∣>0 ⟩
+            length α                              ∎
+            where open ≤-Reasoning
+
+          [ω,η] : [ ω , η ]
+          [ω,η] = subtract-commute ω α ∣ω∣≤∣α∣ [ω,α]
+
+          α≡ωη : α ≡ ω ++ η
+          α≡ωη = sym (subtract-++ʳ ω α ∣ω∣≤∣α∣ [ω,α])
+
+          n,η≡ω^n : ∃[ n ] η ≡ ω ^ n
+          n,η≡ω^n = generator-factorize-rec η (rs (length η) ∣η∣<∣α∣) [ω,η]
+
+    generator-factorize : ∀ α → [ ω , α ] → ∃[ n ] α ≡ ω ^ n
+    generator-factorize α [ω,α] = generator-factorize-rec α (<-wellFounded (length α)) [ω,α]
 
   theorem : ∀ (S : Pred (V *) ℓ) → Dec ∃⟨ S ∩ (_≢ []) ⟩ → ++-commute S → Σ[ ω ∈ V * ] S ⊆ [ ω ]*
   theorem S (no ∄) _ = [] , λ
@@ -284,4 +322,4 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
       S⊆S̅ α∈S = [,]-trans ω̃≢ε [ω,ω̃] S[ ω̃∈S , α∈S ]
 
       S̅⊆[ω]* : S̅ ⊆ [ ω ]*
-      S̅⊆[ω]* {α} [ω,α] = {!!}
+      S̅⊆[ω]* {α} [ω,α] = generator-factorize ω̃ ω̃≢ε α [ω,α]
