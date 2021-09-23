@@ -271,7 +271,7 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
       ... | no  ∣α∣≮∣ω∣ = suc (proj₁ n,η≡ω^n) , trans α≡ωη (cong (ω ++_) (proj₂ n,η≡ω^n))
         where
           ∣ω∣>0 : length ω > 0
-          ∣ω∣>0 = length>0 ω≢ε
+          ∣ω∣>0 = ≢[]⇒length≥1 ω≢ε
 
           ∣ω∣≤∣α∣ : length ω ≤ length α
           ∣ω∣≤∣α∣ = ≮⇒≥ ∣α∣≮∣ω∣

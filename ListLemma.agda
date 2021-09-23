@@ -194,10 +194,6 @@ inits′-≢[] (x ∷ xs) _ i p = x∷xs≢[] $ begin
 ≡[]-dec [] = yes refl
 ≡[]-dec (x ∷ xs) = no λ ()
 
-length>0 : ∀ {xs : List A} → xs ≢ [] → length xs > 0
-length>0 {xs = []} []≢[] = ⊥-elim ([]≢[] refl)
-length>0 {xs = x ∷ xs} _ = s≤s z≤n
-
 index-min : ∀ {P : Pred A ℓ} xs (pqxs : First (∁ P) P xs) i → P (lookup xs i) → First.index pqxs Fin.≤ i
 index-min (x ∷ xs) First.[ px ] Fin.zero p = z≤n
 index-min (x ∷ xs) (¬px First.∷ pqxs) Fin.zero p = ⊥-elim (¬px p)
