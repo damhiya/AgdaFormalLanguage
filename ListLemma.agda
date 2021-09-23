@@ -171,7 +171,7 @@ length-lookup-inits′ (x ∷ xs) xs≢[] i = begin
   ℕ.suc (length (take (toℕ (subst Fin p i)) xs))     ≡⟨ cong ℕ.suc (length-take (toℕ (subst Fin p i)) xs) ⟩
   ℕ.suc (toℕ (subst Fin p i) ⊓ length xs)            ≡⟨ cong ℕ.suc (m≤n⇒m⊓n≡m i≤∣xs∣) ⟩
   ℕ.suc (toℕ (subst Fin p i))                        ≡⟨ cong ℕ.suc (toℕ-subst p i) ⟩
-  ℕ.suc (toℕ i) ∎
+  ℕ.suc (toℕ i)                                      ∎
   where
     open ≡-Reasoning
     p = length-map (x ∷_) (inits xs)
