@@ -170,17 +170,16 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
   [_,_]? α β = ≡-dec _≟_ (α ++ β) (β ++ α)
 
   module _ (α : V *) (α≢ε : α ≢ [] ) where
+
     private
       αs : List (V *)
       αs = inits′ α α≢ε
 
-      αs-any : Any ([ α ,_]) αs
-      αs-any = lookup-any αs (lastIndexOfInits′ α α≢ε) (subst [ α ,_] (sym (lookup-lastIndexOfInits′ α α≢ε)) ([,]-refl α))
+      αs-Any : Any ([ α ,_]) αs
+      αs-Any = lookup-any αs (lastIndexOfInits′ α α≢ε) (subst [ α ,_] (sym (lookup-lastIndexOfInits′ α α≢ε)) ([,]-refl α))
 
       αs-first : First (∁ [ α ,_]) [ α ,_] αs
-      αs-first with first (Sum.swap ∘ Sum.fromDec ∘ [ α ,_]?) αs
-      ... | inj₁ p = p
-      ... | inj₂ q = ⊥-elim (All¬⇒¬Any q αs-any)
+      αs-first = Sum.[ id , (λ αs-All → ⊥-elim (All¬⇒¬Any αs-All αs-Any)) ]′ (first (Sum.swap ∘ Sum.fromDec ∘ [ α ,_]?) αs)
 
       i : Fin (length αs)
       i = First.index αs-first
@@ -203,8 +202,9 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
     generator-[,] : [ ω , α ]
     generator-[,] = [,]-sym α ω [α,ω]
 
-    module _ δ (∣δ∣<∣ω∣ : length δ < length ω) ([ω,δ] : [ ω , δ ]) where
-      private
+    generator-min : ∀ δ (∣δ∣<∣ω∣ : length δ < length ω) ([ω,δ] : [ ω , δ ]) → δ ≡ []
+    generator-min δ ∣δ∣<∣ω∣ [ω,δ] = decidable-stable (≡[]-dec δ) ¬¬δ≡ε
+      where
         [α,δ] : [ α , δ ]
         [α,δ] = [,]-trans ω≢ε [α,ω] [ω,δ]
 
@@ -231,71 +231,66 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
           α               ∎
           where open ≡-Reasoning
 
-        module _ (δ≢ε : δ ≢ []) where
-          j : Fin (length αs)
-          j = indexOfInits′ δ α δ≢ε α≢ε δη≡α
+        ¬¬δ≡ε : δ ≢ [] → ⊥
+        ¬¬δ≡ε δ≢ε = <⇒≱ ∣δ∣<∣ω∣ ∣ω∣≤∣δ∣
+          where
+            j : Fin (length αs)
+            j = indexOfInits′ δ α δ≢ε α≢ε δη≡α
 
-          αs[j]≡δ : lookup αs j ≡ δ
-          αs[j]≡δ = lookup-indexOfInits′ δ α δ≢ε α≢ε δη≡α
+            αs[j]≡δ : lookup αs j ≡ δ
+            αs[j]≡δ = lookup-indexOfInits′ δ α δ≢ε α≢ε δη≡α
 
-          ∣αs[j]∣≡1+j : length (lookup αs j) ≡ suc (toℕ j)
-          ∣αs[j]∣≡1+j = length-lookup-inits′ α α≢ε j
+            ∣αs[j]∣≡1+j : length (lookup αs j) ≡ suc (toℕ j)
+            ∣αs[j]∣≡1+j = length-lookup-inits′ α α≢ε j
 
-          ∣δ∣≡1+j : length δ ≡ suc (toℕ j)
-          ∣δ∣≡1+j = subst (λ δ → length δ ≡ suc (toℕ j)) αs[j]≡δ ∣αs[j]∣≡1+j
+            ∣δ∣≡1+j : length δ ≡ suc (toℕ j)
+            ∣δ∣≡1+j = subst (λ δ → length δ ≡ suc (toℕ j)) αs[j]≡δ ∣αs[j]∣≡1+j
 
-          ∣ω∣≡1+i : length ω ≡ suc (toℕ i)
-          ∣ω∣≡1+i = length-lookup-inits′ α α≢ε i
+            ∣ω∣≡1+i : length ω ≡ suc (toℕ i)
+            ∣ω∣≡1+i = length-lookup-inits′ α α≢ε i
 
-          i≤j : i Fin.≤ j
-          i≤j = index-min αs αs-first j (subst [ α ,_] (sym αs[j]≡δ) [α,δ])
+            i≤j : i Fin.≤ j
+            i≤j = index-min αs αs-first j (subst [ α ,_] (sym αs[j]≡δ) [α,δ])
 
-          ∣ω∣≤∣δ∣ : length ω ≤ length δ
-          ∣ω∣≤∣δ∣ = begin
-            length ω  ≡⟨ ∣ω∣≡1+i ⟩
-            1 + toℕ i ≤⟨ s≤s i≤j ⟩
-            1 + toℕ j ≡˘⟨ ∣δ∣≡1+j ⟩
-            length δ  ∎
-            where open ≤-Reasoning
+            ∣ω∣≤∣δ∣ : length ω ≤ length δ
+            ∣ω∣≤∣δ∣ = begin
+              length ω  ≡⟨ ∣ω∣≡1+i ⟩
+              1 + toℕ i ≤⟨ s≤s i≤j ⟩
+              1 + toℕ j ≡˘⟨ ∣δ∣≡1+j ⟩
+              length δ  ∎
+              where open ≤-Reasoning
 
-          never : ⊥
-          never = <⇒≱ ∣δ∣<∣ω∣ ∣ω∣≤∣δ∣
+    generator-factorize-rec : ∀ α → Acc _<_ (length α) → [ ω , α ] → ∃[ n ] α ≡ ω ^ n
+    generator-factorize-rec α (acc rs) [ω,α] with length α <? length ω
+    ... | yes ∣α∣<∣ω∣ = 0 , generator-min α ∣α∣<∣ω∣ [ω,α]
+    ... | no  ∣α∣≮∣ω∣ = suc (proj₁ n,η≡ω^n) , trans α≡ωη (cong (ω ++_) (proj₂ n,η≡ω^n))
+      where
+        ∣ω∣>0 : length ω > 0
+        ∣ω∣>0 = ≢[]⇒length≥1 ω≢ε
 
-      generator-min : δ ≡ []
-      generator-min = decidable-stable (≡[]-dec δ) never
+        ∣ω∣≤∣α∣ : length ω ≤ length α
+        ∣ω∣≤∣α∣ = ≮⇒≥ ∣α∣≮∣ω∣
 
-    private
-      generator-factorize-rec : ∀ α → Acc _<_ (length α) → [ ω , α ] → ∃[ n ] α ≡ ω ^ n
-      generator-factorize-rec α (acc rs) [ω,α] with length α <? length ω
-      ... | yes ∣α∣<∣ω∣ = 0 , generator-min α ∣α∣<∣ω∣ [ω,α]
-      ... | no  ∣α∣≮∣ω∣ = suc (proj₁ n,η≡ω^n) , trans α≡ωη (cong (ω ++_) (proj₂ n,η≡ω^n))
-        where
-          ∣ω∣>0 : length ω > 0
-          ∣ω∣>0 = ≢[]⇒length≥1 ω≢ε
+        η : V *
+        η = subtract ω α
 
-          ∣ω∣≤∣α∣ : length ω ≤ length α
-          ∣ω∣≤∣α∣ = ≮⇒≥ ∣α∣≮∣ω∣
+        ∣η∣<∣α∣ : length η < length α
+        ∣η∣<∣α∣ = begin-strict
+          length η                              ≡⟨⟩
+          length (take (length α ∸ length ω) α) ≡⟨ length-take (length α ∸ length ω) α ⟩
+          (length α ∸ length ω) ⊓ length α      ≡⟨ m≤n⇒m⊓n≡m (m∸n≤m (length α) (length ω)) ⟩
+          length α ∸ length ω                   <⟨ m>0∧n>0⇒m∸n<m (<-transˡ ∣ω∣>0 ∣ω∣≤∣α∣) ∣ω∣>0 ⟩
+          length α                              ∎
+          where open ≤-Reasoning
 
-          η : V *
-          η = subtract ω α
+        [ω,η] : [ ω , η ]
+        [ω,η] = subtract-commute ω α ∣ω∣≤∣α∣ [ω,α]
 
-          ∣η∣<∣α∣ : length η < length α
-          ∣η∣<∣α∣ = begin-strict
-            length η                              ≡⟨⟩
-            length (take (length α ∸ length ω) α) ≡⟨ length-take (length α ∸ length ω) α ⟩
-            (length α ∸ length ω) ⊓ length α      ≡⟨ m≤n⇒m⊓n≡m (m∸n≤m (length α) (length ω)) ⟩
-            length α ∸ length ω                   <⟨ m>0∧n>0⇒m∸n<m (<-transˡ ∣ω∣>0 ∣ω∣≤∣α∣) ∣ω∣>0 ⟩
-            length α                              ∎
-            where open ≤-Reasoning
+        α≡ωη : α ≡ ω ++ η
+        α≡ωη = sym (subtract-++ʳ ω α ∣ω∣≤∣α∣ [ω,α])
 
-          [ω,η] : [ ω , η ]
-          [ω,η] = subtract-commute ω α ∣ω∣≤∣α∣ [ω,α]
-
-          α≡ωη : α ≡ ω ++ η
-          α≡ωη = sym (subtract-++ʳ ω α ∣ω∣≤∣α∣ [ω,α])
-
-          n,η≡ω^n : ∃[ n ] η ≡ ω ^ n
-          n,η≡ω^n = generator-factorize-rec η (rs (length η) ∣η∣<∣α∣) [ω,η]
+        n,η≡ω^n : ∃[ n ] η ≡ ω ^ n
+        n,η≡ω^n = generator-factorize-rec η (rs (length η) ∣η∣<∣α∣) [ω,η]
 
     generator-factorize : ∀ α → [ ω , α ] → ∃[ n ] α ≡ ω ^ n
     generator-factorize α [ω,α] = generator-factorize-rec α (<-wellFounded (length α)) [ω,α]

@@ -165,12 +165,12 @@ length-inits (x ∷ xs) = cong ℕ.suc (trans (length-map (x ∷_) (inits xs)) (
 length-lookup-inits′ : ∀ (xs : List A) (xs≢[] : xs ≢ []) i → length (lookup (inits′ xs xs≢[]) i) ≡ ℕ.suc (toℕ i)
 length-lookup-inits′ [] []≢[] i = ⊥-elim ([]≢[] refl)
 length-lookup-inits′ (x ∷ xs) xs≢[] i = begin
-  length (lookup (List.map (_∷_ x) (inits xs)) i) ≡⟨ cong length (lookup-map (x ∷_) (inits xs) i) ⟩
-  length (x ∷ lookup (inits xs) (subst Fin p i)) ≡⟨⟩
+  length (lookup (List.map (_∷_ x) (inits xs)) i)    ≡⟨ cong length (lookup-map (x ∷_) (inits xs) i) ⟩
+  length (x ∷ lookup (inits xs) (subst Fin p i))     ≡⟨⟩
   ℕ.suc (length (lookup (inits xs) (subst Fin p i))) ≡⟨ cong (ℕ.suc ∘ length) (lookup-inits xs (subst Fin p i)) ⟩
-  ℕ.suc (length (take (toℕ (subst Fin p i)) xs)) ≡⟨ cong ℕ.suc (length-take (toℕ (subst Fin p i)) xs) ⟩
-  ℕ.suc (toℕ (subst Fin p i) ⊓ length xs) ≡⟨ cong ℕ.suc (m≤n⇒m⊓n≡m i≤∣xs∣) ⟩
-  ℕ.suc (toℕ (subst Fin p i)) ≡⟨ cong ℕ.suc (toℕ-subst p i) ⟩
+  ℕ.suc (length (take (toℕ (subst Fin p i)) xs))     ≡⟨ cong ℕ.suc (length-take (toℕ (subst Fin p i)) xs) ⟩
+  ℕ.suc (toℕ (subst Fin p i) ⊓ length xs)            ≡⟨ cong ℕ.suc (m≤n⇒m⊓n≡m i≤∣xs∣) ⟩
+  ℕ.suc (toℕ (subst Fin p i))                        ≡⟨ cong ℕ.suc (toℕ-subst p i) ⟩
   ℕ.suc (toℕ i) ∎
   where
     open ≡-Reasoning
@@ -179,12 +179,9 @@ length-lookup-inits′ (x ∷ xs) xs≢[] i = begin
     i≤∣xs∣ : toℕ (subst Fin p i) ≤ length xs
     i≤∣xs∣ = +-cancelˡ-≤ 1 (subst (toℕ (subst Fin p i) <_) (length-inits xs) (toℕ<n (subst Fin p i)))
 
-x∷xs≢[] : ∀ {x : A} {xs} → x ∷ xs ≢ []
-x∷xs≢[] ()
-
 inits′-≢[] : ∀ (xs : List A) (xs≢[] : xs ≢ []) i → lookup (inits′ xs xs≢[]) i ≢ []
 inits′-≢[] [] []≢[] _ = ⊥-elim ([]≢[] refl)
-inits′-≢[] (x ∷ xs) _ i p = x∷xs≢[] $ begin
+inits′-≢[] (x ∷ xs) _ i p = (λ ()) $ begin
   x ∷ lookup (inits xs) (subst Fin (length-map (x ∷_) (inits xs)) i) ≡˘⟨ lookup-map (x ∷_) (inits xs) i ⟩
   lookup (List.map (x ∷_) (inits xs)) i                              ≡⟨ p ⟩
   []                                                                 ∎
