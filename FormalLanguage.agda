@@ -250,7 +250,7 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
             ∣ω∣≡1+i = length-lookup-inits′ α α≢ε i
 
             i≤j : i Fin.≤ j
-            i≤j = index-min αs αs-first j (subst [ α ,_] (sym αs[j]≡δ) [α,δ])
+            i≤j = index-min αs αs-first j (contradiction (subst [ α ,_] (sym αs[j]≡δ) [α,δ]))
 
             ∣ω∣≤∣δ∣ : length ω ≤ length δ
             ∣ω∣≤∣δ∣ = begin

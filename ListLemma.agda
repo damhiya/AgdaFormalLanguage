@@ -21,7 +21,7 @@ open import Relation.Unary using (Pred; Decidable; ∁)
 
 private
   variable
-    a ℓ : Level
+    a ℓ ℓ₁ ℓ₂ : Level
     A B : Set a
 
 infix 20 _^_
@@ -191,11 +191,10 @@ inits′-≢[] (x ∷ xs) _ i p = (λ ()) $ begin
 ≡[]-dec [] = yes refl
 ≡[]-dec (x ∷ xs) = no λ ()
 
-index-min : ∀ {P : Pred A ℓ} xs (pqxs : First (∁ P) P xs) i → P (lookup xs i) → First.index pqxs Fin.≤ i
-index-min (x ∷ xs) First.[ px ] Fin.zero p = z≤n
-index-min (x ∷ xs) (¬px First.∷ pqxs) Fin.zero p = ⊥-elim (¬px p)
-index-min (x ∷ xs) First.[ px ] (Fin.suc i) p = z≤n
-index-min (x ∷ xs) (¬px First.∷ pqxs) (Fin.suc i) p = s≤s (index-min xs pqxs i p)
+index-min : ∀ {P : Pred A ℓ₁} {Q : Pred A ℓ₂} xs (pqxs : First P Q xs) i → ¬ P (lookup xs i) → First.index pqxs Fin.≤ i
+index-min (x ∷ xs) First.[ qx ] i ¬p = z≤n
+index-min (x ∷ xs) (px First.∷ pqxs) Fin.zero ¬p = ⊥-elim (¬p px)
+index-min (x ∷ xs) (px First.∷ pqxs) (Fin.suc i) ¬p = s≤s (index-min xs pqxs i ¬p)
 
 m>0∧n>0⇒m∸n<m : ∀ {m n} → m > 0 → n > 0 → m ∸ n < m
 m>0∧n>0⇒m∸n<m {m = suc m} {n = suc n} (s≤s _) (s≤s _) = s≤s (m∸n≤m m n)
