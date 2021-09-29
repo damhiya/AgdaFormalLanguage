@@ -20,6 +20,7 @@ open import Level using (Level)
 open import Relation.Binary.Core
 open import Relation.Binary.Definitions
 open import Relation.Binary.PropositionalEquality.Core
+open import Relation.Binary.PropositionalEquality.Properties
 open import Relation.Nullary
 open import Relation.Nullary.Negation
 open import Relation.Unary hiding (Decidable)
@@ -173,25 +174,29 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
 
     private
       αs : List (V *)
-      αs = inits′ α α≢ε
+      αs = inits′′ α
 
       αs-Any : Any ([ α ,_]) αs
-      αs-Any = lookup-any αs (lastIndexOfInits′ α α≢ε) (subst [ α ,_] (sym (lookup-lastIndexOfInits′ α α≢ε)) ([,]-refl α))
+      αs-Any = subst (Any [ α ,_]) (cong inits′′ (++-identityʳ α)) (lookup-any (inits′′ (α ++ [])) i p)
+        where
+          i = indexOfInits′′[ α ++ [] ] α≢ε
+          eq = lookup-indexOfInits′′[ α ++ [] ] α≢ε
+          p = subst [ α ,_] (sym eq) ([,]-refl α)
 
-      αs-first : First (∁ [ α ,_]) [ α ,_] αs
-      αs-first = Sum.[ id , (λ αs-All → ⊥-elim (All¬⇒¬Any αs-All αs-Any)) ]′ (first (Sum.swap ∘ Sum.fromDec ∘ [ α ,_]?) αs)
+      αs-First : First (∁ [ α ,_]) [ α ,_] αs
+      αs-First = Sum.[ id , (λ αs-All → ⊥-elim (All¬⇒¬Any αs-All αs-Any)) ]′ (first (Sum.swap ∘ Sum.fromDec ∘ [ α ,_]?) αs)
 
       i : Fin (length αs)
-      i = First.index αs-first
+      i = First.index αs-First
 
       ω : V *
       ω = lookup αs i
 
       ω≢ε : ω ≢ []
-      ω≢ε = inits′-≢[] α α≢ε (First.index αs-first)
+      ω≢ε = subst (_≢ []) (sym (lookup-inits′′ α i)) (take≢[] 1+n≢0 α≢ε)
 
       [α,ω] : [ α , ω ]
-      [α,ω] = First.index-satisfied αs-first
+      [α,ω] = First.index-satisfied αs-First
 
     generator : V *
     generator = ω
@@ -215,10 +220,10 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
         δη₁≡ω = subtract-++ʳ δ ω (<⇒≤ ∣δ∣<∣ω∣) ([,]-sym ω δ [ω,δ])
 
         η₂ : V *
-        η₂ = proj₁ (lookup-inits′ α α≢ε i)
+        η₂ = drop (ℕ.suc (toℕ i)) α
 
         ωη₂≡α : ω ++ η₂ ≡ α
-        ωη₂≡α = proj₂ (lookup-inits′ α α≢ε i)
+        ωη₂≡α = subst (λ ω → ω ++ η₂ ≡ α) (sym (lookup-inits′′ α i)) (take++drop (ℕ.suc (toℕ i)) α)
 
         η : V *
         η = η₁ ++ η₂
@@ -234,23 +239,38 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
         ¬¬δ≡ε : δ ≢ [] → ⊥
         ¬¬δ≡ε δ≢ε = <⇒≱ ∣δ∣<∣ω∣ ∣ω∣≤∣δ∣
           where
+            ȷ : Fin (length (inits′′ (δ ++ η)))
+            ȷ = indexOfInits′′[ δ ++ η ] δ≢ε
+
             j : Fin (length αs)
-            j = indexOfInits′ δ α δ≢ε α≢ε δη≡α
+            j = subst Fin (cong (length ∘ inits′′) δη≡α) ȷ
 
             αs[j]≡δ : lookup αs j ≡ δ
-            αs[j]≡δ = lookup-indexOfInits′ δ α δ≢ε α≢ε δη≡α
+            αs[j]≡δ = begin
+              lookup αs j                                                                     ≡⟨ lookup-subst (sym (cong inits′′ δη≡α)) j ⟩
+              lookup (inits′′ (δ ++ η)) (subst Fin (cong length (sym (cong inits′′ δη≡α))) j) ≡⟨ cong (λ p → lookup (inits′′ (δ ++ η)) (subst Fin p j)) 𝕡 ⟩
+              lookup (inits′′ (δ ++ η)) (subst Fin (sym p) (subst Fin p ȷ))                   ≡⟨ cong (lookup (inits′′ (δ ++ η))) (subst-sym-subst p) ⟩
+              lookup (inits′′ (δ ++ η)) ȷ                                                     ≡⟨ lookup-indexOfInits′′[ δ ++ η ] δ≢ε ⟩
+              δ                                                                               ∎
+              where
+                open ≡-Reasoning
+                p = cong (length ∘ inits′′) δη≡α
+                𝕡 = begin
+                  cong length (sym (cong inits′′ δη≡α)) ≡⟨ cong-sym length _ ⟩
+                  sym (cong length (cong inits′′ δη≡α)) ≡⟨ cong sym (sym (cong-∘ δη≡α)) ⟩
+                  sym p                                 ∎
 
             ∣αs[j]∣≡1+j : length (lookup αs j) ≡ suc (toℕ j)
-            ∣αs[j]∣≡1+j = length-lookup-inits′ α α≢ε j
+            ∣αs[j]∣≡1+j = length-lookup-inits′′ α j
 
             ∣δ∣≡1+j : length δ ≡ suc (toℕ j)
             ∣δ∣≡1+j = subst (λ δ → length δ ≡ suc (toℕ j)) αs[j]≡δ ∣αs[j]∣≡1+j
 
             ∣ω∣≡1+i : length ω ≡ suc (toℕ i)
-            ∣ω∣≡1+i = length-lookup-inits′ α α≢ε i
+            ∣ω∣≡1+i = length-lookup-inits′′ α i
 
             i≤j : i Fin.≤ j
-            i≤j = index-min αs αs-first j (contradiction (subst [ α ,_] (sym αs[j]≡δ) [α,δ]))
+            i≤j = index-min αs αs-First j (contradiction (subst [ α ,_] (sym αs[j]≡δ) [α,δ]))
 
             ∣ω∣≤∣δ∣ : length ω ≤ length δ
             ∣ω∣≤∣δ∣ = begin
