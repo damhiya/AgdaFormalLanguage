@@ -207,7 +207,7 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
     generator-[,] : [ ω , α ]
     generator-[,] = [,]-sym α ω [α,ω]
 
-    generator-min : ∀ δ (∣δ∣<∣ω∣ : length δ < length ω) ([ω,δ] : [ ω , δ ]) → δ ≡ []
+    generator-min : ∀ δ → length δ < length ω → [ ω , δ ] → δ ≡ []
     generator-min δ ∣δ∣<∣ω∣ [ω,δ] = decidable-stable (≡[]-dec δ) ¬¬δ≡ε
       where
         [α,δ] : [ α , δ ]
@@ -324,9 +324,6 @@ module _ (V : Set a) (_≟_ : DecidableEquality V) where
     where
       ω : V *
       ω = generator ω̃ ω̃≢ε
-
-      ω≢ε : ω ≢ []
-      ω≢ε = generator≢ε ω̃ ω̃≢ε
 
       [ω,ω̃] : [ ω , ω̃ ]
       [ω,ω̃] = generator-[,] ω̃ ω̃≢ε
